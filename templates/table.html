@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}{{ table_name }} | مدیریت دیتابیس{% endblock %}
+{% block content %}
+<section class="page-head compact-head">
+    <div>
+        <a class="breadcrumb" href="/db/{{ connection.id }}">{{ connection.database }}</a>
+        <h1>{{ table_name }}</h1>
+        <p>{{ total_rows }} ردیف. صفحه {{ page }} از {{ total_pages }}.</p>
+    </div>
+</section>
+
+{% if not primary_key %}
+    <div class="alert warning">ویرایش و حذف ردیف‌ها غیرفعال است، چون این جدول دقیقا یک کلید اصلی ندارد.</div>
+{% endif %}
+
+<section class="workspace-grid table-workspace">
+    <aside class="side-stack table-side">
+        <form method="post" action="/db/{{ connection.id }}/tables/{{ table_name }}/columns" class="panel stack" data-loading-label="در حال افزودن ستون..." data-confirm-submit="افزودن ستون ساختار جدول را تغییر می‌دهد. تایید می‌کنید؟">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+            <div class="panel-title">
+                <h2>افزودن ستون</h2>
+                <span class="badge">Schema</span>
+            </div>
+            <input type="hidden" name="page" value="{{ page }}">
+            <input type="hidden" name="page_size" value="{{ page_size }}">
+            <label>نام
+                <input name="column_name" pattern="[A-Za-z_][A-Za-z0-9_]{0,62}" required>
+            </label>
+            <label>نوع
+                <select name="column_type">
+                    {% for column_type in column_types %}<option value="{{ column_type }}">{{ column_type }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="checkbox"><input type="checkbox" name="nullable" value="true" checked> Nullable</label>
+            <button class="button primary" type="submit">افزودن ستون</button>
+        </form>
+
+        <form method="post" action="/db/{{ connection.id }}/tables/{{ table_name }}/rows" class="panel stack" data-loading-label="در حال افزودن ردیف..." data-confirm-submit="افزودن ردیف جدید در دیتابیس ذخیره می‌شود. تایید می‌کنید؟">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+            <div class="panel-title">
+                <h2>افزودن ردیف</h2>
+                <span class="badge">Data</span>
+            </div>
+            <input type="hidden" name="_page" value="{{ page }}">
+            <input type="hidden" name="_page_size" value="{{ page_size }}">
+            <div class="form-scroll">
+                {% for column in columns %}
+                    {% set column_type = column.type|lower %}
+                    <label>{{ column.name }}
+                        {% if "bool" in column_type or column_type in ["tinyint(1)", "bit"] %}
+                            <select name="{{ column.name }}"><option value="">NULL</option><option value="true">True</option><option value="false">False</option></select>
+                        {% elif "date" in column_type and "time" not in column_type %}
+                            <input name="{{ column.name }}" type="date" placeholder="{{ column.type }}">
+                        {% elif "timestamp" in column_type or "datetime" in column_type %}
+                            <input name="{{ column.name }}" type="datetime-local" placeholder="{{ column.type }}">
+                        {% elif "int" in column_type %}
+                            <input name="{{ column.name }}" type="number" step="1" placeholder="{{ column.type }}">
+                        {% elif "decimal" in column_type or "numeric" in column_type or "float" in column_type or "double" in column_type or "real" in column_type %}
+                            <input name="{{ column.name }}" type="number" step="any" placeholder="{{ column.type }}">
+                        {% else %}
+                            <input name="{{ column.name }}" placeholder="{{ column.type }}">
+                        {% endif %}
+                    </label>
+                {% endfor %}
+            </div>
+            <button class="button primary" type="submit">افزودن</button>
+        </form>
+    </aside>
+
+    <section class="main-stack data-main">
+        <div class="panel data-panel">
+            <div class="panel-title rows-title">
+                <div>
+                    <h2>ردیف‌ها</h2>
+                    <p>جستجو، فیلتر و مرتب‌سازی روی داده‌های دیتابیس اعمال می‌شود.</p>
+                </div>
+                <span class="badge">{{ total_rows }}</span>
+            </div>
+
+            <form id="filter-form" class="data-controls" method="get" action="/db/{{ connection.id }}/tables/{{ table_name }}" data-loading-label="در حال فیلتر کردن...">
+                <input type="hidden" name="page" value="1">
+                {% if sort_by %}<input type="hidden" name="sort_by" value="{{ sort_by }}">{% endif %}
+                {% if sort_by %}<input type="hidden" name="sort_dir" value="{{ sort_dir }}">{% endif %}
+                <label class="search-field">جستجو
+                    <input name="search" value="{{ search }}" placeholder="جستجو در همه ستون‌ها">
+                </label>
+                <label class="inline-field">تعداد ردیف
+                    <select name="page_size">
+                        {% for size in [10, 25, 50, 100] %}<option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>{% endfor %}
+                    </select>
+                </label>
+                <button class="button primary" type="submit">اعمال فیلتر</button>
+                <a class="button" href="/db/{{ connection.id }}/tables/{{ table_name }}?page_size={{ page_size }}">پاک کردن</a>
+            </form>
+
+            <nav class="pager table-pager" aria-label="Pagination">
+                {% if has_previous %}
+                    <a class="button small" href="/db/{{ connection.id }}/tables/{{ table_name }}?page=1{{ query_suffix }}">اول</a>
+                    <a class="button small" href="/db/{{ connection.id }}/tables/{{ table_name }}?page={{ page - 1 }}{{ query_suffix }}">قبلی</a>
+                {% else %}
+                    <span class="button small disabled">اول</span><span class="button small disabled">قبلی</span>
+                {% endif %}
+                <span class="pager-status">صفحه {{ page }} از {{ total_pages }}</span>
+                {% if has_next %}
+                    <a class="button small" href="/db/{{ connection.id }}/tables/{{ table_name }}?page={{ page + 1 }}{{ query_suffix }}">بعدی</a>
+                    <a class="button small" href="/db/{{ connection.id }}/tables/{{ table_name }}?page={{ total_pages }}{{ query_suffix }}">آخر</a>
+                {% else %}
+                    <span class="button small disabled">بعدی</span><span class="button small disabled">آخر</span>
+                {% endif %}
+            </nav>
+
+            <form method="post" action="/db/{{ connection.id }}/tables/{{ table_name }}/rows/bulk" data-bulk-form data-loading-label="در حال اعمال تغییرات..." data-confirm-submit="تغییرات انتخاب‌شده مستقیما روی دیتابیس اعمال می‌شود. تایید می‌کنید؟">
+                <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+                <input type="hidden" name="_primary_key" value="{{ primary_key }}">
+                <input type="hidden" name="_page" value="{{ page }}">
+                <input type="hidden" name="_page_size" value="{{ page_size }}">
+                <div class="table-wrap data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                {% if primary_key %}<th class="select-column"><input type="checkbox" data-select-all aria-label="انتخاب همه ردیف‌ها"></th>{% endif %}
+                                {% for column in columns %}
+                                    {% set next_sort_dir = "desc" if sort_by == column.name and sort_dir == "asc" else "asc" %}
+                                    <th>
+                                        <a class="sort-link {% if sort_by == column.name %}is-active{% endif %}" href="/db/{{ connection.id }}/tables/{{ table_name }}?page=1{{ filter_query_suffix }}&sort_by={{ column.name }}&sort_dir={{ next_sort_dir }}">
+                                            <span>{{ column.name }}</span>
+                                            {% if sort_by == column.name %}<small>{{ "↓" if sort_dir == "desc" else "↑" }}</small>{% endif %}
+                                        </a>
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                            <tr class="filter-row">
+                                {% if primary_key %}<th class="select-column"></th>{% endif %}
+                                {% for column in columns %}
+                                    <th><input form="filter-form" name="filter__{{ column.name }}" value="{{ filters.get(column.name, '') }}" placeholder="فیلتر"></th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in rows %}
+                            {% set row_index = loop.index0 %}
+                            <tr data-row-index="{{ row_index }}">
+                                {% if primary_key %}
+                                    <td class="select-column">
+                                        <input type="checkbox" name="_selected_rows" value="{{ row_index }}" data-row-select aria-label="انتخاب ردیف {{ row_index + 1 }}">
+                                        <input type="hidden" name="_row_{{ row_index }}_primary_value" value="{{ row[primary_key] }}">
+                                    </td>
+                                {% endif %}
+                                {% for column in columns %}
+                                    {% set raw_value = row[column.name] if row[column.name] is not none else "" %}
+                                    {% set column_type = column.type|lower %}
+                                    {% set value = input_value(raw_value, column.type) %}
+                                    <td>
+                                        {% if primary_key %}
+                                            {% if "bool" in column_type or column_type in ["tinyint(1)", "bit"] %}
+                                                {% set bool_text = value|string|lower %}
+                                                {% set bool_value = "true" if bool_text in ["true", "1"] else "false" if bool_text in ["false", "0"] else "" %}
+                                                <select class="cell-input" name="row_{{ row_index }}__{{ column.name }}" data-original="{{ bool_value }}" {% if column.name == primary_key %}disabled{% endif %}>
+                                                    <option value="" {% if bool_value == "" %}selected{% endif %}>NULL</option>
+                                                    <option value="true" {% if bool_value == "true" %}selected{% endif %}>True</option>
+                                                    <option value="false" {% if bool_value == "false" %}selected{% endif %}>False</option>
+                                                </select>
+                                            {% elif "date" in column_type and "time" not in column_type %}
+                                                <input class="cell-input" name="row_{{ row_index }}__{{ column.name }}" type="date" value="{{ value }}" data-original="{{ value }}" {% if column.name == primary_key %}readonly{% endif %}>
+                                            {% elif "timestamp" in column_type or "datetime" in column_type %}
+                                                <input class="cell-input" name="row_{{ row_index }}__{{ column.name }}" type="datetime-local" value="{{ value }}" data-original="{{ value }}" {% if column.name == primary_key %}readonly{% endif %}>
+                                            {% elif "int" in column_type %}
+                                                <input class="cell-input" name="row_{{ row_index }}__{{ column.name }}" type="number" step="1" value="{{ value }}" data-original="{{ value }}" {% if column.name == primary_key %}readonly{% endif %}>
+                                            {% elif "decimal" in column_type or "numeric" in column_type or "float" in column_type or "double" in column_type or "real" in column_type %}
+                                                <input class="cell-input" name="row_{{ row_index }}__{{ column.name }}" type="number" step="any" value="{{ value }}" data-original="{{ value }}" {% if column.name == primary_key %}readonly{% endif %}>
+                                            {% else %}
+                                                <input class="cell-input" name="row_{{ row_index }}__{{ column.name }}" value="{{ value }}" data-original="{{ value }}" {% if column.name == primary_key %}readonly{% endif %}>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="cell-value">{{ row[column.name] }}</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="{{ columns|length + 1 }}" class="empty">ردیفی پیدا نشد.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if primary_key %}
+                    <div class="bulk-bar" data-bulk-bar>
+                        <div class="bulk-status"><strong data-dirty-count>0</strong> تغییر، <strong data-selected-count>0</strong> انتخاب</div>
+                        <label class="bulk-action-label">عملیات
+                            <select name="_bulk_action" data-bulk-action>
+                                <option value="save_changes">ذخیره تغییرات</option>
+                                <option value="delete_selected">حذف انتخاب‌شده‌ها</option>
+                            </select>
+                        </label>
+                        <button class="button primary" type="submit" data-bulk-submit disabled>اعمال</button>
+                    </div>
+                {% endif %}
+            </form>
+
+            <nav class="pager table-pager footer-pager" aria-label="Pagination">
+                {% if has_previous %}<a class="button" href="/db/{{ connection.id }}/tables/{{ table_name }}?page={{ page - 1 }}{{ query_suffix }}">قبلی</a>{% else %}<span class="button disabled">قبلی</span>{% endif %}
+                <span class="pager-status">صفحه {{ page }} از {{ total_pages }}</span>
+                {% if has_next %}<a class="button" href="/db/{{ connection.id }}/tables/{{ table_name }}?page={{ page + 1 }}{{ query_suffix }}">بعدی</a>{% else %}<span class="button disabled">بعدی</span>{% endif %}
+            </nav>
+        </div>
+    </section>
+</section>
+{% endblock %}

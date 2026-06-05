@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}دیتابیس‌ها | مدیریت دیتابیس{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <h1>پایگاه‌های داده</h1>
+        <p>فقط اتصال‌هایی که در تنظیمات محیطی تعریف شده‌اند نمایش داده می‌شوند.</p>
+    </div>
+</section>
+
+<section class="grid dashboard-grid">
+    {% for connection in connections %}
+        <a class="card link-card" href="/db/{{ connection.id }}">
+            <strong>{{ connection.label }}</strong>
+            <span>{{ connection.host }}:{{ connection.port }}</span>
+        </a>
+    {% else %}
+        <div class="empty">هیچ دیتابیسی تنظیم نشده است. مقدارهای POSTGRES_DATABASES، MYSQL_DATABASES یا MARIADB_DATABASES را در .env تنظیم کنید.</div>
+    {% endfor %}
+</section>
+{% endblock %}

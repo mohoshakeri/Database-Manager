@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error | Database Manager{% endblock %}
+{% block content %}
+<div class="panel">
+    <h1>Request Failed</h1>
+    <div class="alert error">{{ error }}</div>
+    <a class="button" href="/">Back to dashboard</a>
+</div>
+{% endblock %}

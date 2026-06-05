@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ورود | مدیریت دیتابیس</title>
+    {% if settings.favicon_url %}<link rel="icon" href="{{ settings.favicon_url }}">{% endif %}
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="login-page">
+    <div class="loading-overlay" data-loading-overlay hidden>
+        <div class="loading-box">
+            <span class="spinner" aria-hidden="true"></span>
+            <span data-loading-text>در حال ورود...</span>
+        </div>
+    </div>
+    <main class="login-card">
+        {% if settings.logo_url %}<img class="login-logo" src="{{ settings.logo_url }}" alt="Logo">{% endif %}
+        <h1>مدیریت دیتابیس</h1>
+        <form method="post" action="/login" class="stack" data-loading-label="در حال ورود...">
+            {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+            <label>نام کاربری
+                <input name="username" autocomplete="username" required>
+            </label>
+            <label>رمز عبور
+                <input name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <label>کد TOTP
+                <input name="totp_code" inputmode="numeric" autocomplete="one-time-code" placeholder="اگر غیرفعال است خالی بگذارید">
+            </label>
+            <button class="button primary" type="submit">ورود</button>
+        </form>
+    </main>
+    <script src="/static/js/app.js" defer></script>
+</body>
+</html>

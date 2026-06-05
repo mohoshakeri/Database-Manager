@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ connection.database }} | مدیریت دیتابیس{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <a class="breadcrumb" href="/">دیتابیس‌ها</a>
+        <h1>{{ connection.database }}</h1>
+        <p>{{ connection.kind.upper() }} at {{ connection.host }}:{{ connection.port }}</p>
+    </div>
+</section>
+
+<section class="two-col wide-left database-layout">
+    <div class="panel">
+        <h2>جدول‌ها</h2>
+        <div class="list">
+            {% for table in tables %}
+                <div class="list-row">
+                    <a href="/db/{{ connection.id }}/tables/{{ table.name }}">{{ table.name }}</a>
+                    <form method="post" action="/db/{{ connection.id }}/tables/{{ table.name }}/drop" data-loading-label="در حال حذف جدول..." data-confirm-submit="حذف جدول انتخاب‌شده قابل برگشت نیست. این عملیات انجام شود؟">
+                        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+                        <button class="button danger small" type="submit">حذف</button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="empty">جدولی پیدا نشد.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <form method="post" action="/db/{{ connection.id }}/tables" class="panel stack" data-create-table-form data-loading-label="در حال ساخت جدول..." data-confirm-submit="ساخت جدول جدید ساختار دیتابیس را تغییر می‌دهد. تایید می‌کنید؟">
+        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+        <div class="panel-title">
+            <h2>ساخت جدول</h2>
+            <span class="badge">Schema</span>
+        </div>
+        <label>نام جدول
+            <input name="table_name" pattern="[A-Za-z_][A-Za-z0-9_]{0,62}" required>
+        </label>
+        <input type="hidden" name="columns_spec" data-columns-spec required>
+        <div class="column-builder" data-column-builder>
+            <div class="column-builder-head"><span>نام ستون</span><span>نوع</span><span>Nullable</span><span>Primary</span><span></span></div>
+            <div class="column-builder-row" data-column-row>
+                <input data-column-name pattern="[A-Za-z_][A-Za-z0-9_]{0,62}" placeholder="id" required>
+                <select data-column-type>{% for column_type in column_types %}<option value="{{ column_type }}">{{ column_type }}</option>{% endfor %}</select>
+                <input type="checkbox" data-column-nullable checked aria-label="Nullable">
+                <input type="checkbox" data-column-primary aria-label="Primary key">
+                <button class="button small" type="button" data-remove-column>حذف</button>
+            </div>
+        </div>
+        <button class="button" type="button" data-add-column-row>افزودن ستون دیگر</button>
+        <button class="button primary" type="submit">ساخت جدول</button>
+    </form>
+</section>
+{% endblock %}

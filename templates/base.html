@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}مدیریت دیتابیس{% endblock %}</title>
+    {% if settings.favicon_url %}<link rel="icon" href="{{ settings.favicon_url }}">{% endif %}
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <div class="loading-overlay" data-loading-overlay hidden>
+        <div class="loading-box">
+            <span class="spinner" aria-hidden="true"></span>
+            <span data-loading-text>در حال بارگذاری...</span>
+        </div>
+    </div>
+    <div class="confirm-modal" data-confirm-modal hidden>
+        <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+            <h2 id="confirm-title">تایید عملیات حساس</h2>
+            <p data-confirm-message>این عملیات روی دیتابیس اعمال می‌شود. مطمئن هستید؟</p>
+            <div class="confirm-actions">
+                <button class="button" type="button" data-confirm-cancel>انصراف</button>
+                <button class="button danger" type="button" data-confirm-accept>تایید و اعمال</button>
+            </div>
+        </div>
+    </div>
+    <header class="topbar">
+        <a class="brand" href="/">
+            {% if settings.logo_url %}<img src="{{ settings.logo_url }}" alt="Logo">{% endif %}
+            <span>مدیریت دیتابیس</span>
+        </a>
+        <form method="post" action="/logout" data-loading-label="در حال خروج...">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+            <button class="button ghost" type="submit">خروج</button>
+        </form>
+    </header>
+    <main class="shell">
+        {% if request.query_params.get("error") %}
+            <div class="alert error">عملیات ناموفق بود: {{ request.query_params.get("error") }}</div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <script src="/static/js/app.js" defer></script>
+</body>
+</html>
